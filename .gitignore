@@ -5,3 +5,8 @@
 
 # Source-of-truth documents stay local — not part of the git-tracked app codebase
 docs/
+
+# Global AI-agent conventions & skills stay local
+AGENTS.md
+agents/
+agents/skills/

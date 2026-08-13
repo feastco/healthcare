@@ -35,6 +35,8 @@ class PermissionSeeder extends Seeder
         'schedules.create',
         'schedules.update',
         'schedules.delete',
+        'appointments.view',
+        'appointments.create',
     ];
 
     private const ROLE_PERMISSIONS = [
@@ -45,6 +47,8 @@ class PermissionSeeder extends Seeder
             'doctors.view',
             'departments.view',
             'schedules.view',
+            'appointments.view',
+            'appointments.create',
         ],
         'Doctor' => [
             'schedules.view',

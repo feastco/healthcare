@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AppointmentController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DoctorController;
@@ -70,4 +71,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/doctors/{doctorId}/schedules', [DoctorScheduleController::class, 'store'])->middleware('permission:schedules.create,sanctum');
     Route::put('/schedules/{id}', [DoctorScheduleController::class, 'update'])->middleware('permission:schedules.update,sanctum');
     Route::delete('/schedules/{id}', [DoctorScheduleController::class, 'destroy'])->middleware('permission:schedules.delete,sanctum');
+
+    Route::middleware('permission:appointments.view,sanctum')->group(function () {
+        Route::get('/appointments', [AppointmentController::class, 'index']);
+        Route::get('/appointments/{id}', [AppointmentController::class, 'show']);
+    });
+
+    Route::post('/appointments', [AppointmentController::class, 'store'])->middleware('permission:appointments.create,sanctum');
 });
