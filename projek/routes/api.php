@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\DepartmentController;
+use App\Http\Controllers\Api\V1\DoctorController;
+use App\Http\Controllers\Api\V1\DoctorScheduleController;
+use App\Http\Controllers\Api\V1\PatientController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -35,4 +39,35 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:roles.revoke-permissions,sanctum');
 
     Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:permissions.view,sanctum');
+
+    Route::middleware('permission:patients.view,sanctum')->group(function () {
+        Route::get('/patients', [PatientController::class, 'index']);
+        Route::get('/patients/{id}', [PatientController::class, 'show']);
+    });
+
+    Route::post('/patients', [PatientController::class, 'store'])->middleware('permission:patients.create,sanctum');
+    Route::put('/patients/{id}', [PatientController::class, 'update'])->middleware('permission:patients.update,sanctum');
+
+    Route::middleware('permission:doctors.view,sanctum')->group(function () {
+        Route::get('/doctors', [DoctorController::class, 'index']);
+        Route::get('/doctors/{id}', [DoctorController::class, 'show']);
+    });
+
+    Route::post('/doctors', [DoctorController::class, 'store'])->middleware('permission:doctors.create,sanctum');
+    Route::put('/doctors/{id}', [DoctorController::class, 'update'])->middleware('permission:doctors.update,sanctum');
+    Route::delete('/doctors/{id}', [DoctorController::class, 'destroy'])->middleware('permission:doctors.delete,sanctum');
+
+    Route::middleware('permission:departments.view,sanctum')->group(function () {
+        Route::get('/departments', [DepartmentController::class, 'index']);
+        Route::get('/departments/{id}', [DepartmentController::class, 'show']);
+    });
+
+    Route::post('/departments', [DepartmentController::class, 'store'])->middleware('permission:departments.create,sanctum');
+    Route::put('/departments/{id}', [DepartmentController::class, 'update'])->middleware('permission:departments.update,sanctum');
+    Route::delete('/departments/{id}', [DepartmentController::class, 'destroy'])->middleware('permission:departments.delete,sanctum');
+
+    Route::get('/doctors/{doctorId}/schedules', [DoctorScheduleController::class, 'index'])->middleware('permission:schedules.view,sanctum');
+    Route::post('/doctors/{doctorId}/schedules', [DoctorScheduleController::class, 'store'])->middleware('permission:schedules.create,sanctum');
+    Route::put('/schedules/{id}', [DoctorScheduleController::class, 'update'])->middleware('permission:schedules.update,sanctum');
+    Route::delete('/schedules/{id}', [DoctorScheduleController::class, 'destroy'])->middleware('permission:schedules.delete,sanctum');
 });

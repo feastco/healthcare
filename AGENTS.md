@@ -398,6 +398,206 @@ yang punya file di `.agents/skills/` repo ini. Divisi lain (`pilih-divisi`,
 user/global — jangan dicari di folder repo ini. Kategori A-G di dokumen
 ini berlaku untuk semuanya tanpa terkecuali.
 
+## VERSION CONTROL AND GITHUB GOVERNANCE
+
+### Repository
+
+- Git adalah otoritas version control untuk riwayat implementasi.
+- GitHub `origin` harus menunjuk ke repository project yang disetujui
+  (`https://github.com/feastco/healthcare.git`).
+- Branch utama adalah `main`.
+- Dilarang membuat atau mengganti repository tanpa otorisasi eksplisit.
+- Dilarang menginisialisasi ulang repository Git yang sudah ada.
+- Dilarang menghapus atau mengganti remote yang ada secara diam-diam.
+
+### Branch
+
+Untuk project solo ini:
+
+- `main` adalah branch development default kecuali project secara
+  eksplisit mengadopsi strategi branching lain.
+- Jangan membuat branch pendek yang tidak perlu untuk tiap task.
+- Gunakan branch terpisah hanya jika task membutuhkan pekerjaan
+  terisolasi, eksperimen, review, atau alasan lain yang jelas.
+- Jangan pernah commit langsung ke branch milik orang lain.
+- Hormati branch protection yang aktif bila ada.
+
+### Commit
+
+Sebelum setiap commit:
+
+1. inspeksi `git status`;
+2. inspeksi perubahan yang relevan;
+3. inspeksi perubahan staged;
+4. verifikasi tidak ada secret yang ter-stage;
+5. verifikasi hanya file terkait task yang ter-stage;
+6. jalankan test yang relevan;
+7. commit hanya setelah verifikasi.
+
+Commit wajib:
+
+- mewakili perubahan engineering yang koheren;
+- menghindari modifikasi yang tidak berhubungan;
+- tidak mengandung secret;
+- tidak mengandung file temporary hasil generate;
+- tidak mengandung kredensial;
+- tidak mengandung file environment lokal.
+
+Dilarang membuat commit tanpa makna seperti: "update", "fix stuff",
+"changes", "test".
+
+Gunakan pesan commit yang ringkas dan bermakna.
+
+Jangan amend commit yang sudah ter-push kecuali diotorisasi eksplisit.
+
+### History
+
+Jangan pernah:
+
+- force push;
+- menulis ulang history yang dibagi (shared history);
+- mereset history remote;
+- menghapus branch main;
+- mengganti riwayat repository;
+- menggunakan perintah Git destruktif untuk menyembunyikan kesalahan.
+
+Jika history perlu dikoreksi setelah push:
+STOP dan laporkan situasinya.
+
+Jangan menulis ulang history secara diam-diam.
+
+### Push
+
+Sebelum setiap push:
+
+1. `git status`
+2. inspeksi commit yang dituju;
+3. verifikasi branch;
+4. verifikasi remote;
+5. verifikasi file staged/committed;
+6. verifikasi secret tidak ter-track;
+7. jalankan test yang relevan;
+8. konfirmasi state working tree.
+
+Gunakan push normal:
+
+`git push`
+
+Jangan pernah menggunakan:
+
+`git push --force`
+
+atau:
+
+`git push --force-with-lease`
+
+kecuali diotorisasi eksplisit oleh user.
+
+Jika push gagal:
+STOP dan laporkan kegagalan persisnya.
+
+Jangan memodifikasi history untuk melewati push yang gagal.
+
+### GitHub
+
+GitHub adalah remote repository dan permukaan kolaborasi/audit.
+
+Jangan:
+
+- membuat release tanpa otorisasi;
+- memodifikasi pengaturan repository tanpa otorisasi;
+- memodifikasi branch protection tanpa otorisasi;
+- menambahkan collaborator tanpa otorisasi;
+- mengubah visibilitas repository tanpa otorisasi;
+- membuat GitHub Actions/workflow tanpa kebutuhan task;
+- menambahkan infrastruktur CI/CD secara spekulatif;
+- membuat issues, labels, milestones, projects, atau discussions yang
+  tidak perlu.
+
+Jika konfigurasi repository GitHub harus diubah untuk sebuah task:
+inspeksi state saat ini dulu dan ubah hanya pengaturan minimal yang
+dibutuhkan.
+
+### Secret Hygiene
+
+Jangan pernah commit:
+
+- `.env`
+- `.env.*` kecuali `.env.example` yang disetujui tanpa secret
+- kredensial database;
+- password;
+- API keys;
+- access tokens;
+- private keys;
+- client secrets;
+- sertifikat berisi material privat;
+- kredensial GitHub;
+- local credential stores.
+
+Sebelum push, verifikasi:
+
+- `.env` ignored;
+- `.env.testing` ignored;
+- `docs/` ignored sesuai keputusan project yang berlaku;
+- `AGENTS.md` ter-track;
+- tidak ada file secret yang ter-stage.
+
+Jangan pernah mencetak nilai secret di output terminal, CHANGELOG, pesan
+commit, GitHub issues, pull requests, atau laporan final.
+
+### Docs
+
+Keputusan project saat ini:
+
+`docs/` di-ignore oleh Git.
+
+Jangan force-add file di bawah `docs/`.
+
+`AGENTS.md` tetap ter-track.
+
+Lanjutkan memelihara dokumentasi engineering lokal sesuai governance
+project, meskipun direktori dokumentasi tidak ter-track.
+
+Jangan ubah kebijakan tracking `docs/` tanpa otorisasi eksplisit.
+
+### Review
+
+Setelah implementasi:
+
+- inspeksi `git status`;
+- inspeksi `git diff`;
+- inspeksi staged diff;
+- inspeksi commit;
+- verifikasi test;
+- verifikasi branch;
+- verifikasi remote;
+- verifikasi hasil push.
+
+`git status` saja bukan bukti cukup untuk file untracked.
+
+Gunakan `git ls-files`, `git diff --cached`, dan inspeksi terarah bila
+perlu.
+
+### AI Execution
+
+Model implementasi tidak boleh:
+
+- commit pekerjaan spekulatif;
+- push kode yang belum terverifikasi;
+- membuat commit yang tidak berhubungan;
+- menulis ulang history;
+- mengubah pengaturan GitHub tanpa otorisasi;
+- membuat repository;
+- mengekspos secret;
+- force-add file yang di-ignore.
+
+Output model bukan otoritas.
+
+Repository state, source-of-truth yang disetujui, test, dan bukti Git
+aktual adalah otoritatif.
+
+Jangan mengklaim commit atau push berhasil tanpa bukti perintah aktual.
+
 ## TOKEN / CONTEXT EFFICIENCY
 
 Project execution menggunakan OpenCode Free dengan token/context budget

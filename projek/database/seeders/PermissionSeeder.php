@@ -20,6 +20,35 @@ class PermissionSeeder extends Seeder
         'permissions.view',
         'roles.assign-permissions',
         'roles.revoke-permissions',
+        'patients.view',
+        'patients.create',
+        'patients.update',
+        'doctors.view',
+        'doctors.create',
+        'doctors.update',
+        'doctors.delete',
+        'departments.view',
+        'departments.create',
+        'departments.update',
+        'departments.delete',
+        'schedules.view',
+        'schedules.create',
+        'schedules.update',
+        'schedules.delete',
+    ];
+
+    private const ROLE_PERMISSIONS = [
+        'Registration Staff' => [
+            'patients.view',
+            'patients.create',
+            'patients.update',
+            'doctors.view',
+            'departments.view',
+            'schedules.view',
+        ],
+        'Doctor' => [
+            'schedules.view',
+        ],
     ];
 
     public function run(): void
@@ -32,8 +61,11 @@ class PermissionSeeder extends Seeder
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $superAdmin = Role::findByName('Super Admin');
-        $superAdmin->syncPermissions(self::PERMISSIONS);
+        Role::findByName('Super Admin')->syncPermissions(self::PERMISSIONS);
+
+        foreach (self::ROLE_PERMISSIONS as $roleName => $permissions) {
+            Role::findByName($roleName)->syncPermissions($permissions);
+        }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
