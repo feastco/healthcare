@@ -13,7 +13,7 @@ class DepartmentFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->randomElement([
+            'name' => fake()->randomElement([
                 'Internal Medicine',
                 'Pediatrics',
                 'Cardiology',

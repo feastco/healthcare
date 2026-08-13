@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\CreateAppointmentAction;
+use App\Actions\TransitionQueueAction;
+use App\Enums\AppointmentStatus;
 use App\Exceptions\AppointmentConflictException;
+use App\Exceptions\AppointmentStatusTransitionException;
 use App\Exceptions\AppointmentUnavailableException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Appointment\StoreAppointmentRequest;
+use App\Http\Requests\Appointment\UpdateAppointmentStatusRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
 use Illuminate\Database\QueryException;
@@ -71,6 +75,31 @@ class AppointmentController extends Controller
 
         return response()->json([
             'data' => new AppointmentResource($appointment),
+        ]);
+    }
+
+    public function updateStatus(
+        UpdateAppointmentStatusRequest $request,
+        int $id,
+        TransitionQueueAction $transitionQueue,
+    ): JsonResponse {
+        $appointment = Appointment::findOrFail($id);
+
+        $target = AppointmentStatus::from($request->validated('status'));
+
+        Gate::authorize('updateStatus', [$appointment, $target]);
+
+        try {
+            $updated = $transitionQueue->handle($appointment, $target);
+        } catch (AppointmentStatusTransitionException) {
+            return response()->json([
+                'message' => 'The requested appointment status transition is not permitted.',
+                'errors' => ['status' => ['The requested appointment status transition is not permitted.']],
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => new AppointmentResource($updated->load(['patient', 'doctor'])),
         ]);
     }
 

@@ -78,4 +78,5 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/appointments', [AppointmentController::class, 'store'])->middleware('permission:appointments.create,sanctum');
+    Route::patch('/appointments/{id}/status', [AppointmentController::class, 'updateStatus']);
 });
