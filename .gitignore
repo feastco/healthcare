@@ -1,0 +1,7 @@
+# Environment & secrets — TASK-0001 / ADR-012: .env must never be tracked
+.env
+.env.*
+!.env.example
+
+# Source-of-truth documents stay local — not part of the git-tracked app codebase
+docs/
