@@ -8,6 +8,7 @@ use App\Exceptions\OverpaymentException;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 
 class ProcessPaymentAction
@@ -45,6 +46,8 @@ class ProcessPaymentAction
             $newState = $this->resultingState($invoice, $payment);
 
             $invoice->update(['status' => $newState]);
+
+            app(AuditService::class)->created($payment, actor: $cashier);
 
             return $payment;
         });

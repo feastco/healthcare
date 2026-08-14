@@ -7,9 +7,12 @@ use App\Http\Requests\Doctor\StoreDoctorRequest;
 use App\Http\Requests\Doctor\UpdateDoctorRequest;
 use App\Http\Resources\DoctorResource;
 use App\Models\Doctor;
+use App\Services\AuditService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class DoctorController extends Controller
@@ -25,7 +28,13 @@ class DoctorController extends Controller
     {
         Gate::authorize('create', Doctor::class);
 
-        $doctor = Doctor::create($request->validated());
+        $doctor = DB::transaction(function () use ($request) {
+            $doctor = Doctor::create($request->validated());
+
+            app(AuditService::class)->created($doctor, actor: $request->user());
+
+            return $doctor;
+        });
 
         return response()->json([
             'data' => new DoctorResource($doctor->load('department')),
@@ -49,14 +58,27 @@ class DoctorController extends Controller
 
         Gate::authorize('update', $doctor);
 
-        $doctor->update($request->validated());
+        $doctor = DB::transaction(function () use ($request, $doctor) {
+            $before = $doctor->getAttributes();
+
+            $doctor->update($request->validated());
+
+            app(AuditService::class)->updated(
+                $doctor,
+                before: $before,
+                after: $doctor->getAttributes(),
+                actor: $request->user(),
+            );
+
+            return $doctor->fresh(['department']);
+        });
 
         return response()->json([
-            'data' => new DoctorResource($doctor->fresh(['department'])),
+            'data' => new DoctorResource($doctor),
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $doctor = Doctor::findOrFail($id);
 
@@ -70,7 +92,13 @@ class DoctorController extends Controller
         }
 
         try {
-            $doctor->delete();
+            DB::transaction(function () use ($doctor, $request) {
+                $before = $doctor->getAttributes();
+
+                $doctor->delete();
+
+                app(AuditService::class)->deleted($doctor, before: $before, actor: $request->user());
+            });
         } catch (QueryException) {
             return response()->json([
                 'message' => 'Cannot delete doctor that is still referenced by other records.',

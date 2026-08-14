@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AppointmentController;
+use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DoctorController;
@@ -83,4 +84,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/invoices/{invoiceId}/payments', [InvoicePaymentController::class, 'index']);
     Route::post('/invoices/{invoiceId}/payments', [InvoicePaymentController::class, 'store']);
+
+    Route::get('/audits', [AuditController::class, 'index']);
 });

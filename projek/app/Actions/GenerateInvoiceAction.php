@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Enums\InvoiceState;
 use App\Models\Appointment;
 use App\Models\Invoice;
+use App\Services\AuditService;
 use Illuminate\Support\Facades\DB;
 
 class GenerateInvoiceAction
@@ -30,6 +31,8 @@ class GenerateInvoiceAction
             ]);
 
             $invoice->refresh();
+
+            app(AuditService::class)->created($invoice);
 
             return $invoice;
         });

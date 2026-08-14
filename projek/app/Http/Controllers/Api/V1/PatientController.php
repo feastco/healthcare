@@ -8,8 +8,10 @@ use App\Http\Requests\Patient\StorePatientRequest;
 use App\Http\Requests\Patient\UpdatePatientRequest;
 use App\Http\Resources\PatientResource;
 use App\Models\Patient;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class PatientController extends Controller
@@ -25,12 +27,18 @@ class PatientController extends Controller
     {
         Gate::authorize('create', Patient::class);
 
-        $patient = Patient::create([
-            'identifier_pat' => $generateIdentifier->handle(),
-            'name' => $request->validated('name'),
-            'dob' => $request->validated('dob'),
-            'gender' => $request->validated('gender'),
-        ]);
+        $patient = DB::transaction(function () use ($request, $generateIdentifier) {
+            $patient = Patient::create([
+                'identifier_pat' => $generateIdentifier->handle(),
+                'name' => $request->validated('name'),
+                'dob' => $request->validated('dob'),
+                'gender' => $request->validated('gender'),
+            ]);
+
+            app(AuditService::class)->created($patient, actor: $request->user());
+
+            return $patient;
+        });
 
         return response()->json([
             'data' => new PatientResource($patient),
@@ -54,10 +62,23 @@ class PatientController extends Controller
 
         Gate::authorize('update', $patient);
 
-        $patient->update($request->validated());
+        $patient = DB::transaction(function () use ($request, $patient) {
+            $before = $patient->getAttributes();
+
+            $patient->update($request->validated());
+
+            app(AuditService::class)->updated(
+                $patient,
+                before: $before,
+                after: $patient->getAttributes(),
+                actor: $request->user(),
+            );
+
+            return $patient->fresh();
+        });
 
         return response()->json([
-            'data' => new PatientResource($patient->fresh()),
+            'data' => new PatientResource($patient),
         ]);
     }
 }

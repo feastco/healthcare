@@ -61,6 +61,7 @@ class SeedRaceFixtureCommand extends Command
             'patients',
             'departments',
             'sessions',
+            'audit_logs',
             'users',
         ] as $table) {
             DB::table($table)->delete();
