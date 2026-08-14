@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Enums\AppointmentStatus;
 use App\Exceptions\AppointmentStatusTransitionException;
 use App\Models\Appointment;
+use Illuminate\Support\Facades\DB;
 
 class TransitionQueueAction
 {
@@ -44,8 +45,14 @@ class TransitionQueueAction
             );
         }
 
-        $appointment->update(['status' => $target]);
+        DB::transaction(function () use ($appointment, $target) {
+            $appointment->update(['status' => $target]);
 
-        return $appointment;
+            if ($target === AppointmentStatus::COMPLETED) {
+                app(GenerateInvoiceAction::class)->handle($appointment);
+            }
+        });
+
+        return $appointment->refresh();
     }
 }
