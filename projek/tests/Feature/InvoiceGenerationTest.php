@@ -39,11 +39,15 @@ class InvoiceGenerationTest extends TestCase
         return User::factory()->create()->assignRole($role);
     }
 
-    private function createAppointment(AppointmentStatus $status): Appointment
+    private function createAppointment(AppointmentStatus $status, ?User $owner = null): Appointment
     {
+        $doctor = $owner !== null
+            ? Doctor::factory()->create(['user_id' => $owner->id])
+            : Doctor::factory();
+
         return Appointment::factory()->create([
             'patient_id' => Patient::factory(),
-            'doctor_id' => Doctor::factory(),
+            'doctor_id' => $doctor,
             'status' => $status,
         ]);
     }
@@ -61,7 +65,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 100000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         $this->complete($user, $appointment->id)->assertStatus(200);
 
@@ -77,7 +81,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 100000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         $this->complete($user, $appointment->id)->assertStatus(200);
 
@@ -91,7 +95,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 100000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         $this->complete($user, $appointment->id)->assertStatus(200);
 
@@ -105,7 +109,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 50000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         $this->complete($user, $appointment->id)->assertStatus(200);
 
@@ -120,7 +124,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 100000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         $this->complete($user, $appointment->id)->assertStatus(200);
 
@@ -153,7 +157,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 250000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         $this->complete($user, $appointment->id)->assertStatus(200);
 
@@ -182,7 +186,7 @@ class InvoiceGenerationTest extends TestCase
         config(['billing.default_invoice_amount' => 100000.00]);
 
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS, $user);
 
         DB::listen(function ($query) {
             if (str_contains($query->sql, 'insert into "invoices"')) {

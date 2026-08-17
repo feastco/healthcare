@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DoctorController;
 use App\Http\Controllers\Api\V1\DoctorScheduleController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\InvoicePaymentController;
 use App\Http\Controllers\Api\V1\PatientController;
 use App\Http\Controllers\Api\V1\PermissionController;
@@ -82,6 +83,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments', [AppointmentController::class, 'store'])->middleware('permission:appointments.create,sanctum');
     Route::patch('/appointments/{id}/status', [AppointmentController::class, 'updateStatus']);
 
+    Route::get('/invoices', [InvoiceController::class, 'index']);
+    Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
     Route::get('/invoices/{invoiceId}/payments', [InvoicePaymentController::class, 'index']);
     Route::post('/invoices/{invoiceId}/payments', [InvoicePaymentController::class, 'store']);
 

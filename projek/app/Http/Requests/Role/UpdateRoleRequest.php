@@ -9,7 +9,7 @@ class UpdateRoleRequest extends BaseFormRequest
 {
     public function rules(): array
     {
-        $roleId = $this->route('id');
+        $roleId = $this->route('role') ?? $this->route('id');
 
         return [
             'name' => ['sometimes', 'string', 'max:255', Rule::unique('roles', 'name')->ignore($roleId)],

@@ -1,58 +1,175 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PKU Healthcare Operations Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> **Portfolio / evaluation simulation** — not production software, not an EMR/SIMRS replacement.
+> All data is synthetic. See the [Medical Domain Disclaimer](#medical-domain-disclaimer).
 
-## About Laravel
+## Overview
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+A healthcare operations management system built as a modular monolith with a layered
+architecture (ADR-001). It covers registration, scheduling, billing, payment, and audit
+for a hospital operations scenario.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **API**: RESTful JSON under `/api/v1` (ADR-010), token authentication via Laravel Sanctum.
+- **Web UI**: server-rendered Blade application (dashboard, master data, operations, monitoring,
+  administration) styled with the TailAdmin shell (Tailwind CSS 4 + Alpine.js 3 + Vite 8).
+- **Database**: PostgreSQL 18 with a `btree_gist` exclusion constraint that prevents doctor
+  schedule overlap (ADR-003, ADR-007).
+- **Authorization**: role + permission based via `spatie/laravel-permission`, enforced
+  server-side with middleware and Policy/Gate on every operation (ADR-005).
+- **Financial integrity**: invoice/payment amounts are decimal (`numeric`) and computed
+  server-side with BCMath inside `DB::transaction()` boundaries (ADR-006, RULES).
+- **Audit**: synchronous, sanitized audit trail written inside the same transaction as the
+  target mutation (ADR-009).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Tech Stack
 
-## Learning Laravel
+| Component      | Version (locked in)                  |
+|----------------|--------------------------------------|
+| PHP            | 8.3+ (verified on 8.4.24)            |
+| Laravel        | 13.x (`laravel/framework: ^13.17`)   |
+| PostgreSQL     | 18                                   |
+| Laravel Sanctum| `^4.3`                              |
+| spatie/permission | `^8.3`                           |
+| Node.js        | 20.19+ / 22.12+ (verified on 24.14.0)|
+| Vite / Tailwind| Vite `^8.0` / Tailwind CSS `^4.0`    |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Modules
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Master data**: patients, doctors, departments, doctor schedules.
+- **Scheduling**: appointments with a state machine
+  (`WAITING → IN_PROGRESS → COMPLETED`, plus `CANCELLED`); doctor-owner transition
+  authorization; PostgreSQL exclusion constraint guarantees no overlapping appointment for
+  the same doctor.
+- **Billing & payment**: invoice generation, payment processing with overpayment protection
+  and outstanding balance computed via BCMath.
+- **Audit logs**: read-only monitoring for the `IT/Admin` role.
+- **Administration**: users, roles, and role-permission assignment (`Super Admin` only).
+- **My Queue**: doctor daily queue with start/complete service actions.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Roles
 
-## Agentic Development
+`Super Admin`, `Registration Staff`, `Doctor`, `Cashier`, `IT/Admin`.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Requirements
+
+- **PHP** 8.3+ with extensions: `pdo_pgsql`, `pgsql`, `bcmath`, `mbstring`, `openssl`,
+  `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`, `curl`, `intl`.
+- **Composer** 2.x.
+- **PostgreSQL** 18 (the `btree_gist` extension is created automatically by the
+  `2026_08_14_110001_add_appointment_exclusion_constraint` migration).
+- **Node.js** 20.19+ (Vite 8 requirement; 22.12+ recommended) and **npm**.
+
+## Local Setup (ADR-012 — Local Development / Evaluation)
+
+1. **Install PHP dependencies**
+
+   ```bash
+   composer install
+   ```
+
+2. **Prepare PostgreSQL databases**
+
+   Create two databases: `pku_healthcare` (application) and `pku_healthcare_test` (tests).
+   The connection is owned by the `postgres` role by default.
+
+3. **Configure the environment**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env`:
+
+   - `DB_CONNECTION=pgsql`, `DB_DATABASE=pku_healthcare`, `DB_USERNAME`, `DB_PASSWORD`.
+   - `DEMO_ADMIN_PASSWORD` — the demo account password (see [Demo accounts](#demo-accounts)).
+   - `APP_URL=http://localhost:8000` matches the value used by `php artisan serve`.
+
+4. **Generate the application key**
+
+   ```bash
+   php artisan key:generate
+   ```
+
+5. **Install and build frontend assets**
+
+   ```bash
+   npm install
+   npm run build
+   ```
+
+   During development you can run `npm run dev` instead (Vite dev server).
+
+6. **Migrate and seed**
+
+   ```bash
+   php artisan migrate --seed
+   ```
+
+7. **Start the application**
+
+   ```bash
+   php artisan serve
+   ```
+
+   Open `http://localhost:8000`.
+
+## Demo Accounts
+
+- `superadmin@example.com` — role **Super Admin**.
+- `test@example.com` — no special role.
+
+Both accounts use the password you set in the `DEMO_ADMIN_PASSWORD` environment variable.
+
+- The password is **read from the environment only** — it is never hard-coded in the
+  seeder or source (ADR-012).
+- The demo users are **created only when `DEMO_ADMIN_PASSWORD` is set**. If it is empty or
+  unset, `php artisan db:seed` still seeds roles and permissions but **skips** the demo
+  accounts.
+- The stored password is a **bcrypt hash** — never stored in plaintext.
+- No other role accounts (Registration Staff, Doctor, Cashier, IT/Admin) are seeded.
+
+## Tests
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+php artisan test
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+- The test suite runs against `.env.testing`, which uses **PostgreSQL** (`pku_healthcare_test`)
+  with `RefreshDatabase` — there is no SQLite fallback.
+- Test-only values (including a test `DEMO_ADMIN_PASSWORD`) live in `.env.testing`, which is
+  git-ignored.
+- Code style:
 
-## Contributing
+  ```bash
+  vendor/bin/pint --test
+  ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- Current verified baseline: **489/489 tests, 1421 assertions** (see `CHANGELOG`).
 
-## Code of Conduct
+## Frontend Build
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+npm run build    # production build (vite build)
+npm run dev      # development server (hot reload)
+```
 
-## Security Vulnerabilities
+## Security
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- `.env` and all `.env.*` files are git-ignored; only `.env.example` (placeholders, no
+  secrets) is tracked.
+- No credentials are committed; seed data is entirely synthetic (fake names/emails/NIKs,
+  no real healthcare data, no external healthcare integration).
+- Authorization is enforced server-side (route middleware + Policy/Gate) on every mutation —
+  hiding a UI button is never the authorization boundary.
 
-## License
+## Destructive Commands Warning
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+`php artisan migrate:fresh` and any `DROP DATABASE` / `DROP TABLE` operation destroy data
+irreversibly. Only run them against disposable local evaluation databases.
+
+## Medical Domain Disclaimer
+
+This project is a **simulation for portfolio and evaluation purposes**. It is not a
+production hospital information system, not an EMR/SIMRS replacement, and not a substitute
+for certified clinical, billing, or administrative systems. Any data it processes is
+synthetic and must not be used for real patient care or record keeping.

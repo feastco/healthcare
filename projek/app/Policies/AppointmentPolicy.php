@@ -28,6 +28,19 @@ class AppointmentPolicy
     {
         $roles = TransitionQueueAction::rolesFor($appointment->status, $target);
 
-        return $roles !== [] && $user->hasAnyRole($roles);
+        if ($roles === [] || ! $user->hasAnyRole($roles)) {
+            return false;
+        }
+
+        if (in_array('Doctor', $roles, true) && ! $this->isDoctorOwner($user, $appointment)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function isDoctorOwner(User $user, Appointment $appointment): bool
+    {
+        return $appointment->doctor()->where('user_id', $user->id)->exists();
     }
 }

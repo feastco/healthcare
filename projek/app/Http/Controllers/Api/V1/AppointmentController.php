@@ -13,10 +13,12 @@ use App\Http\Requests\Appointment\StoreAppointmentRequest;
 use App\Http\Requests\Appointment\UpdateAppointmentStatusRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
+use App\Services\AuditService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class AppointmentController extends Controller
@@ -35,12 +37,18 @@ class AppointmentController extends Controller
         Gate::authorize('create', Appointment::class);
 
         try {
-            $appointment = $createAppointment->handle(
-                patientId: $request->validated('patient_id'),
-                doctorId: $request->validated('doctor_id'),
-                startsAt: Carbon::parse($request->validated('starts_at')),
-                endsAt: Carbon::parse($request->validated('ends_at')),
-            );
+            $appointment = DB::transaction(function () use ($request, $createAppointment) {
+                $appointment = $createAppointment->handle(
+                    patientId: $request->validated('patient_id'),
+                    doctorId: $request->validated('doctor_id'),
+                    startsAt: Carbon::parse($request->validated('starts_at')),
+                    endsAt: Carbon::parse($request->validated('ends_at')),
+                );
+
+                app(AuditService::class)->created($appointment, actor: $request->user());
+
+                return $appointment;
+            });
         } catch (AppointmentUnavailableException) {
             return response()->json([
                 'message' => 'Doctor is not scheduled to work during the requested time.',

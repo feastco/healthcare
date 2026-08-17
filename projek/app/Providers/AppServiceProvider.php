@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\DoctorSchedule;
+use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\User;
 use App\Policies\AppointmentPolicy;
@@ -14,6 +15,7 @@ use App\Policies\AuditLogPolicy;
 use App\Policies\DepartmentPolicy;
 use App\Policies\DoctorPolicy;
 use App\Policies\DoctorSchedulePolicy;
+use App\Policies\InvoicePolicy;
 use App\Policies\PatientPolicy;
 use App\Policies\PermissionPolicy;
 use App\Policies\RolePolicy;
@@ -45,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Doctor::class, DoctorPolicy::class);
         Gate::policy(Department::class, DepartmentPolicy::class);
         Gate::policy(DoctorSchedule::class, DoctorSchedulePolicy::class);
+        Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(Appointment::class, AppointmentPolicy::class);
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
     }

@@ -16,7 +16,7 @@ class AuthFlowTest extends TestCase
 
         $login = $this->postJson('/api/v1/auth/login', [
             'email' => 'superadmin@example.com',
-            'password' => 'password',
+            'password' => env('DEMO_ADMIN_PASSWORD'),
         ]);
 
         $login->assertStatus(200);

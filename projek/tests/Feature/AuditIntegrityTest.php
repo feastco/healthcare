@@ -8,10 +8,12 @@ use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Doctor;
+use App\Models\DoctorSchedule;
 use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\AuditService;
+use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -162,7 +164,10 @@ class AuditIntegrityTest extends TestCase
         config(['billing.default_invoice_amount' => 100000.00]);
 
         $doctor = $this->userWithRole('Doctor');
-        $appointment = Appointment::factory()->create(['status' => AppointmentStatus::IN_PROGRESS]);
+        $appointment = Appointment::factory()->create([
+            'doctor_id' => Doctor::factory()->create(['user_id' => $doctor->id]),
+            'status' => AppointmentStatus::IN_PROGRESS,
+        ]);
 
         $this->actingAs($doctor, 'sanctum')->patchJson(
             "/api/v1/appointments/{$appointment->id}/status",
@@ -181,7 +186,10 @@ class AuditIntegrityTest extends TestCase
     public function test_appointment_status_update_records_before_and_after_state(): void
     {
         $doctor = $this->userWithRole('Doctor');
-        $appointment = Appointment::factory()->create(['status' => AppointmentStatus::IN_PROGRESS]);
+        $appointment = Appointment::factory()->create([
+            'doctor_id' => Doctor::factory()->create(['user_id' => $doctor->id]),
+            'status' => AppointmentStatus::IN_PROGRESS,
+        ]);
 
         $this->actingAs($doctor, 'sanctum')->patchJson(
             "/api/v1/appointments/{$appointment->id}/status",
@@ -242,6 +250,75 @@ class AuditIntegrityTest extends TestCase
             'id' => $invoice->id,
             'status' => InvoiceState::UNPAID->value,
         ]);
+        $this->assertDatabaseCount('audit_logs', 0);
+    }
+
+    public function test_appointment_creation_records_a_create_audit_entry(): void
+    {
+        $staff = $this->userWithRole('Registration Staff');
+        $patient = Patient::factory()->create();
+        $doctor = Doctor::factory()->create();
+
+        DoctorSchedule::factory()->create([
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::parse('2026-09-01 09:00:00')->dayOfWeekIso,
+            'start_time' => '08:00',
+            'end_time' => '17:00',
+        ]);
+
+        $this->actingAs($staff, 'sanctum')->postJson('/api/v1/appointments', [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'starts_at' => '2026-09-01 09:00:00',
+            'ends_at' => '2026-09-01 10:00:00',
+        ])->assertStatus(201);
+
+        $appointment = Appointment::firstOrFail();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'user_id' => $staff->id,
+            'action' => AuditService::ACTION_CREATE,
+            'entity_type' => $appointment->getMorphClass(),
+            'entity_id' => $appointment->id,
+        ]);
+
+        $log = AuditLog::where('entity_type', $appointment->getMorphClass())
+            ->where('entity_id', $appointment->id)
+            ->firstOrFail();
+
+        $this->assertSame(
+            '2026-09-01 09:00:00',
+            $log->after_state['starts_at']
+        );
+    }
+
+    public function test_failed_audit_write_rolls_back_appointment_creation(): void
+    {
+        $staff = $this->userWithRole('Registration Staff');
+        $patient = Patient::factory()->create();
+        $doctor = Doctor::factory()->create();
+
+        DoctorSchedule::factory()->create([
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::parse('2026-09-01 09:00:00')->dayOfWeekIso,
+            'start_time' => '08:00',
+            'end_time' => '17:00',
+        ]);
+
+        DB::listen(function ($query) {
+            if (str_contains($query->sql, 'insert into "audit_logs"')) {
+                throw new \RuntimeException('Simulated audit failure');
+            }
+        });
+
+        $this->actingAs($staff, 'sanctum')->postJson('/api/v1/appointments', [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'starts_at' => '2026-09-01 09:00:00',
+            'ends_at' => '2026-09-01 10:00:00',
+        ])->assertStatus(500);
+
+        $this->assertDatabaseCount('appointments', 0);
         $this->assertDatabaseCount('audit_logs', 0);
     }
 }

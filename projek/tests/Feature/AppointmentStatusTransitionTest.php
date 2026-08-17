@@ -57,6 +57,15 @@ class AppointmentStatusTransitionTest extends TestCase
         ]);
     }
 
+    private function createOwnedAppointment(User $user, AppointmentStatus $status): Appointment
+    {
+        return Appointment::factory()->create([
+            'patient_id' => Patient::factory(),
+            'doctor_id' => Doctor::factory()->create(['user_id' => $user->id]),
+            'status' => $status,
+        ]);
+    }
+
     private function transition(User $user, int $id, string $status)
     {
         return $this->actingAs($user, 'sanctum')->patchJson(
@@ -157,7 +166,7 @@ class AppointmentStatusTransitionTest extends TestCase
     public function test_doctor_can_start_service(): void
     {
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::WAITING);
+        $appointment = $this->createOwnedAppointment($user, AppointmentStatus::WAITING);
 
         $response = $this->transition($user, $appointment->id, 'IN_PROGRESS');
 
@@ -169,13 +178,51 @@ class AppointmentStatusTransitionTest extends TestCase
     public function test_doctor_can_complete_service(): void
     {
         $user = $this->doctorUser();
-        $appointment = $this->createAppointment(AppointmentStatus::IN_PROGRESS);
+        $appointment = $this->createOwnedAppointment($user, AppointmentStatus::IN_PROGRESS);
 
         $response = $this->transition($user, $appointment->id, 'COMPLETED');
 
         $response->assertStatus(200);
         $response->assertJsonPath('data.status', 'COMPLETED');
         $this->assertDatabaseHas('appointments', ['id' => $appointment->id, 'status' => 'COMPLETED']);
+    }
+
+    public function test_doctor_owner_cannot_make_invalid_transition(): void
+    {
+        $user = $this->doctorUser();
+        $appointment = $this->createOwnedAppointment($user, AppointmentStatus::IN_PROGRESS);
+
+        $response = $this->transition($user, $appointment->id, 'WAITING');
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('appointments', ['id' => $appointment->id, 'status' => 'IN_PROGRESS']);
+    }
+
+    public function test_doctor_cannot_start_another_doctors_appointment(): void
+    {
+        $doctorA = $this->doctorUser();
+        $doctorB = $this->doctorUser();
+        $appointment = $this->createOwnedAppointment($doctorB, AppointmentStatus::WAITING);
+
+        $response = $this->transition($doctorA, $appointment->id, 'IN_PROGRESS');
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('appointments', ['id' => $appointment->id, 'status' => 'WAITING']);
+        $this->assertDatabaseCount('audit_logs', 0);
+    }
+
+    public function test_doctor_cannot_complete_another_doctors_appointment(): void
+    {
+        $doctorA = $this->doctorUser();
+        $doctorB = $this->doctorUser();
+        $appointment = $this->createOwnedAppointment($doctorB, AppointmentStatus::IN_PROGRESS);
+
+        $response = $this->transition($doctorA, $appointment->id, 'COMPLETED');
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('appointments', ['id' => $appointment->id, 'status' => 'IN_PROGRESS']);
+        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertDatabaseCount('invoices', 0);
     }
 
     public function test_doctor_cannot_perform_registration_transitions(): void

@@ -9,7 +9,7 @@ class UpdateUserRequest extends BaseFormRequest
 {
     public function rules(): array
     {
-        $userId = $this->route('id');
+        $userId = $this->route('user') ?? $this->route('id');
 
         return [
             'name' => ['sometimes', 'string', 'max:255'],
