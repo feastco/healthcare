@@ -1,4 +1,4 @@
-# Healthcare Operations Management System (Simulation)
+# Healthcare — PKU Operations Management System (Simulation)
 
 > Portfolio simulation of a healthcare operations management system. **This is NOT a production EMR/SIMRS system** — it's an academic/portfolio project built to demonstrate Laravel backend engineering, domain modeling, and full-stack development for a healthcare workflow.
 
@@ -8,7 +8,7 @@
 
 ## ⚠️ Disclaimer
 
-This repository is a **simulation** of a (Penyakit Kencing Manis / Diabetes) healthcare operations management system. It is **not** a real EMR, not production-deployed, and not certified for clinical use. All data is synthetic. Built as a portfolio project to demonstrate Laravel architecture and full-stack engineering.
+This repository is a **simulation** of a PKU (Penyakit Kencing Manis / Diabetes) healthcare operations management system. It is **not** a real EMR, not production-deployed, and not certified for clinical use. All data is synthetic. Built as a portfolio project to demonstrate Laravel architecture and full-stack engineering.
 
 ## 🏗 Project Structure
 
